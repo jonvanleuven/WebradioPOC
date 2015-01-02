@@ -1,0 +1,291 @@
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title></title>
+		<LINK REL="SHORTCUT ICON" HREF="radio.png" />
+		<base target="main">
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>  
+		<script type="text/javascript">
+			//sublime:
+			//http://82.201.47.68/SublimeFM2
+			//http://player.sublimefm.nl/tracklist-jazz.json?r=1420181531704
+
+			var timedCallbacks = [];
+			var soundType = '';
+			var delay = 18;
+			$(document).ready(function () {
+				$('#left').click(toggleLeft);
+				$('#right').click(toggleRight);
+				$('#radioselector select').change(selectChannel);
+				//$('#left').dblclick(oneMinuteLeft);
+				//$('#right').dblclick(oneMinuteRight);
+				updateClock();
+				select3fm();
+			});
+			function updateSoundType(type) {
+				if( soundType != type ) {
+					debug('soundType: ' + type);
+					soundType = type;
+					$('#left').removeClass('music');
+					$('#left').removeClass('break');
+					$('#left').removeClass('commercial-break');
+					$('#left').addClass(type);
+					if( type == 'commercial-break' ) {
+						playRightOnly();
+					} else {
+						playLeftOnly();
+					}
+				}
+			}
+			function detectSoundType() {
+				if( $('#radioselector select :selected').val() != '3fm' ) {
+					$('#left span').text('');
+					return;
+				}
+				$.get('http://radioplayer.npo.nl/data/radiobox2/nowonair/3.json?ac=' + new Date().getTime(), function(data) {
+					$('#left span').html( "<br/>" + data.results[0].songfile.artist + "<br/> - <br/>" + data.results[0].songfile.title);
+					var now = new Date();
+					var start = addSeconds( new Date(data.results[0].startdatetime), delay );
+					var stop = addSeconds( new Date(data.results[0].stopdatetime), delay );
+					debug( 'Song: ' + formatTime(start) + "....." + formatTime(stop));
+					var nextCall = stop;
+					if( start.getTime() < now.getTime() && now.getTime() < stop.getTime() ) {
+						updateSoundType('music');
+					} else {
+						$('#left span').text('');
+						if( now.getMinutes() >= 57 || now.getMinutes() <= 6) {
+							updateSoundType('commercial-break');
+						}
+						else {
+							updateSoundType('break');
+						}
+						if( start.getTime() > now.getTime() ) {
+							debug('New song starting: ' + formatTime(start));
+							nextCall = start;
+						} else {
+							nextCall = addSeconds(now, 10);						
+						}
+					}
+					detectSoundTypeDelayed(nextCall);
+				} ).fail(function(e) {
+    				debug('error: ' + e);
+    				detectSoundTypeDelayed(addSeconds(new Date(), 10));
+  				});			
+			}
+			function detectSoundTypeDelayed( nextCall ) {
+				//debug('next call: ' + nextCall);
+				timedCallbacks.push( function( d ) {
+							if( equals( d, nextCall ) ) {
+								detectSoundType();
+							}
+							return nextCall;
+						});	
+			}
+			function selectChannel() {
+				pause('left', 'left-player');
+				$('#left span').text('');
+				if( $('#radioselector select :selected').val() === 'radio538' ) {
+					select538();
+				} else {
+					select3fm();
+				}
+				play('left', 'left-player');
+			}
+			function select3fm() {
+				$('#left-player').attr('data-src', 'http://icecast.omroep.nl/3fm-bb-mp3');
+				clearTimerEvents();
+				detectSoundType();
+				//hourly(playRightOnly, 57, 15);
+				//hourly(playLeftOnly, 6, 30);
+			}
+			function select538() {
+				$('#left-player').attr('data-src', 'http://vip-icecast.538.lw.triple-it.nl/RADIO538_MP3');
+				clearTimerEvents();
+				hourly(playRightOnly, 56, 50);
+				hourly(playLeftOnly, 6, 0);
+				hourly(playRightOnly, 29, 0);
+				hourly(playLeftOnly, 35, 0);
+			}
+			function clearTimerEvents() {
+				debug('clear timer events');
+				timedCallbacks = [];
+			}
+			function oneMinuteRight() {
+				if( $('#right').hasClass('oneminute') ) {
+					$('#right').removeClass('oneminute');
+				} else {
+					$('#right').addClass('oneminute');
+				}
+			}
+			function playLeftOnly() {
+				if( !$('#right').hasClass('playing') )
+					return;
+				play('left', 'left-player');
+				pause('right', 'right-player');
+			}
+			function playRightOnly() {
+				if( !$('#left').hasClass('playing') )
+					return;
+				play('right', 'right-player');
+				pause('left', 'left-player');
+			}
+			function toggleLeft() {
+				toggle('left', 'left-player');
+			}
+			function toggleRight() {
+				toggle('right', 'right-player');
+			}
+			function toggle(divId, playerId) {
+				var div = $('#' + divId);
+				if( div.hasClass('playing') ) {
+					pause(divId, playerId);
+				} else {
+					play(divId, playerId);
+				}
+			}
+			function play(divId, playerId) {
+				$('#' + divId).addClass('playing');
+				document.getElementById(playerId).src = $('#' + playerId).attr('data-src');
+				setTimeout('playInternal("' + playerId + '")', 500 );
+			}
+			function playInternal(playerId) {
+				document.getElementById(playerId).play();
+			}
+			function pause(divId, playerId) {
+				$('#' + divId).removeClass('playing');
+				if( document.getElementById(playerId).src.length > 0 ) {
+					$('#' + playerId).attr('data-src', document.getElementById(playerId).src);
+				}
+				document.getElementById(playerId).pause();
+				document.getElementById(playerId).src = '';
+			}
+			function updateClock() {
+				var now = new Date();
+				$('#clock span').text( format(now.getHours()) + ":" + format(now.getMinutes()) + ":" + format(now.getSeconds()) );
+				if( $('#clock').attr('data-seconds') != now.getSeconds() ) {
+					timedCallbacks = timedCallbacks.filter( function (value) {
+						var result = value(now);
+        				return result == null || result > now;
+    				})
+				}
+				$('#clock').attr('data-seconds', now.getSeconds());
+				setTimeout(updateClock, 200);
+			}
+			function format( intValue ) {
+				return ( intValue < 10 ) ? ('0' + intValue) : intValue;
+			}
+			function hourly( callback, minute, seconds ) {
+				debug("per hour event registered -> HH:" + format(minute) + ":" + format(seconds));
+				timedCallbacks.push(function(date) {
+					if( date.getMinutes() == minute && date.getSeconds() == seconds ) {
+						debug("hourly event triggered");
+						callback();
+					}
+					return null;
+				});
+			}
+			function debug(message) {
+				$('#debug').append($('<span>' + formatTime(new Date()) + ": " + message + "<br/></span>"))
+				var objDiv = document.getElementById("debug");
+				objDiv.scrollTop = objDiv.scrollHeight;
+			}
+			function addSeconds(date, seconds) {
+				 return new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()+seconds);
+			}
+			function equals(date1, date2) {
+				 return date1.getFullYear() == date1.getFullYear() && date1.getMonth() == date2.getMonth() && 
+				        date1.getDate() == date2.getDate() && date1.getHours() == date2.getHours() && 
+				        date1.getMinutes() == date2.getMinutes() && date1.getSeconds() == date2.getSeconds();
+			}
+			function formatTime(date) {
+				return format(date.getHours()) + ':' + format(date.getMinutes()) + ':' + format(date.getSeconds());	
+			}
+			window.onerror = function (msg, url, line) {
+				debug(msg + ', line: ' + line);
+			}
+		</script>
+		<style type="text/css"> 
+			body { background-color: black; }
+			audio { display:none; }
+			#left {
+				width: 400px;
+				height: 400px;
+				top:60px;
+				left: 30px;
+			}
+			div.control span {
+				font-size:50px;
+				color:black;
+			}
+			div.playing span {
+				font-size:50px;
+				color:#00FF00; !important
+			}
+			#right {
+				width: 400px;
+				height: 400px;
+				top:60px;
+				left: 530px;
+			}
+			div.control {
+				border: 10px solid gray;
+				background-color: gray;
+				color:light-gray;
+				text-align:center;
+			}
+			div.playing {
+				border: 10px solid green;
+				background-color: green; !important
+			}
+			div.break {
+				border: 10px solid blue;
+			}
+			div.commercial-break {
+				border: 10px solid red;
+			}
+			div {
+				position: fixed;
+				border-radius: 25px;
+			}
+			div#clock {
+				top:620px;
+				left: 370px;
+				color: white;
+				font-size: 80px;
+			}
+			div#debug {
+				/*display:none;*/
+				top:740px;
+				left: 30px;
+				width:920px;
+				height:600px;
+				background-color: white;
+				color: black;
+				font-size: 30px;
+				overflow: auto;
+			}
+			#radioselector {
+				top:550px;
+				left:30px;
+			}
+			#radioselector select {
+				font-size: 40px;
+				width:920px;
+			}
+		</style>
+	</head>
+	<body>
+		<audio id="left-player" src="" data-src=""></audio>
+		<audio id="right-player" src="" data-src="http://s3.sonicabroadcast.com:8635/;listen.pls=undefined"></audio>
+		<div class="control" id="left"><span></span></div>
+		<div class="control" id="right"><span></span></div>
+		<div id="clock"><span></span></div>
+		<div id="debug"><span></span></div>
+		<div id="radioselector">
+			<select>
+				<option value="3fm">3FM</option>
+				<option value="radio538">Radio 538</option>
+			</select>
+		</div>
+	</body>
+</html>
