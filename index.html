@@ -10,7 +10,7 @@
 			//http://82.201.47.68/SublimeFM2
 			//http://player.sublimefm.nl/tracklist-jazz.json?r=1420181531704
 
-			var timedCallbacks = [];
+						var timedCallbacks = [];
 			var soundType = '';
 			var delay = 18;
 			$(document).ready(function () {
@@ -24,6 +24,9 @@
 			});
 			function updateSoundType(type) {
 				if( soundType != type ) {
+					if( soundType === 'commercial-break' && type === 'break' ) {
+						return;
+					}
 					debug('soundType: ' + type);
 					soundType = type;
 					$('#left').removeClass('music');
@@ -109,6 +112,16 @@
 			function clearTimerEvents() {
 				debug('clear timer events');
 				timedCallbacks = [];
+				timedCallbacks.push(function(d) {
+					if( document.getElementById('left-player').paused && $('#left').hasClass('playing') ) {
+						document.getElementById('left-player').play();
+						debug('play pressed again for left player');
+					}
+					if( document.getElementById('right-player').paused && $('#right').hasClass('playing') ) {
+						document.getElementById('right-player').play();
+						debug('play pressed again for right player');
+					}
+				});
 			}
 			function oneMinuteRight() {
 				if( $('#right').hasClass('oneminute') ) {
