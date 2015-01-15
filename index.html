@@ -220,6 +220,19 @@
 		<style type="text/css"> 
 			body { background-color: black; }
 			audio { display:none; }
+			div.header {
+				background-color: transparent;
+				text-align:center;
+				width:252px;
+				font-size:34px;
+				color:gray;
+			}
+			div.left-header {
+				left: 38px;
+			}
+			div.right-header {
+				left: 338px;
+			}
 			#left {
 				width: 240px;
 				height: 240px;
@@ -290,7 +303,9 @@
 	<body>
 		<audio id="left-player" src="" data-src=""></audio>
 		<audio id="right-player" src="" data-src="http://s3.sonicabroadcast.com:8635/;listen.pls=undefined"></audio>
+		<div class="header left-header">3FM</div>
 		<div class="control" id="left"><span></span></div>
+		<div class="header right-header">Blue Marlin</div>
 		<div class="control" id="right"><span></span></div>
 		<div id="clock"><span></span></div>
 		<div id="debug"><span></span></div>
