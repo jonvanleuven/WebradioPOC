@@ -107,11 +107,13 @@
 				play('left');
 			}
 			function select3fm() {
+				$('.left-header').text('3FM');
 				$('#left').attr('data-stream', 'http://icecast.omroep.nl/3fm-bb-mp3');
 				clearTimerEvents();
 				detectSoundType();
 			}
 			function select538() {
+				$('.left-header').text('Radio538');
 				$('#left').attr('data-stream', 'http://vip-icecast.538.lw.triple-it.nl/RADIO538_MP3');
 				clearTimerEvents();
 				hourly(playRightOnly, 56, 50);
@@ -299,7 +301,6 @@
 	</head>
 	<body>
 		<audio id="player" src=""></audio>
-		<!-- <audio id="right-player" src="" data-src="http://s3.sonicabroadcast.com:8635/;listen.pls=undefined"></audio> -->
 		<div class="header left-header">3FM</div>
 		<div class="control" id="left" data-stream="http://icecast.omroep.nl/3fm-bb-mp3"><span></span></div>
 		<div class="header right-header">Blue Marlin</div>
