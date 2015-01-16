@@ -14,11 +14,23 @@
 			var soundType = '';
 			var delay = 18;
 			$(document).ready(function () {
-				$('#left').click(toggleLeft);
-				$('#right').click(toggleRight);
+				$('#left').click(function () {
+					if( $('#left').hasClass('playing') ) {
+						pause('left');
+					} else {
+						pause('right');
+						play('left');
+					}
+				});
+				$('#right').click(function () {
+					if( $('#right').hasClass('playing') ) {
+						pause('right');
+					} else {
+						pause('left');
+						play('right');
+					}
+				});
 				$('#radioselector select').change(selectChannel);
-				//$('#left').dblclick(oneMinuteLeft);
-				//$('#right').dblclick(oneMinuteRight);
 				updateClock();
 				select3fm();
 			});
@@ -76,7 +88,6 @@
   				});			
 			}
 			function detectSoundTypeDelayed( nextCall ) {
-				//debug('next call: ' + nextCall);
 				timedCallbacks.push( function( d ) {
 							if( equals( d, nextCall ) ) {
 								detectSoundType();
@@ -85,24 +96,24 @@
 						});	
 			}
 			function selectChannel() {
-				pause('left', 'left-player');
+				pause('left');
 				$('#left span').text('');
 				if( $('#radioselector select :selected').val() === 'radio538' ) {
 					select538();
 				} else {
 					select3fm();
 				}
-				play('left', 'left-player');
+				play('left');
 			}
 			function select3fm() {
-				$('#left-player').attr('data-src', 'http://icecast.omroep.nl/3fm-bb-mp3');
+				$('#player').attr('data-left', 'http://icecast.omroep.nl/3fm-bb-mp3');
 				clearTimerEvents();
 				detectSoundType();
 				//hourly(playRightOnly, 57, 15);
 				//hourly(playLeftOnly, 6, 30);
 			}
 			function select538() {
-				$('#left-player').attr('data-src', 'http://vip-icecast.538.lw.triple-it.nl/RADIO538_MP3');
+				$('#player').attr('data-left', 'http://vip-icecast.538.lw.triple-it.nl/RADIO538_MP3');
 				clearTimerEvents();
 				hourly(playRightOnly, 56, 50);
 				hourly(playLeftOnly, 6, 0);
@@ -112,7 +123,7 @@
 			function clearTimerEvents() {
 				debug('clear timer events');
 				timedCallbacks = [];
-				timedCallbacks.push(function(d) {
+				/*timedCallbacks.push(function(d) {
 					if( document.getElementById('left-player').paused && $('#left').hasClass('playing') ) {
 						document.getElementById('left-player').play();
 						debug('play pressed again for left player');
@@ -121,7 +132,7 @@
 						document.getElementById('right-player').play();
 						debug('play pressed again for right player');
 					}
-				});
+				});*/
 			}
 			function oneMinuteRight() {
 				if( $('#right').hasClass('oneminute') ) {
@@ -132,45 +143,42 @@
 			}
 			function playLeftOnly() {
 				if( !$('#right').hasClass('playing') )
-					return;
-				play('left', 'left-player');
-				pause('right', 'right-player');
+				 	return;
+				pause('right');
+				play('left');
 			}
 			function playRightOnly() {
 				if( !$('#left').hasClass('playing') )
-					return;
-				play('right', 'right-player');
-				pause('left', 'left-player');
+				 	return;
+				pause('left');
+				play('right');
 			}
 			function toggleLeft() {
-				toggle('left', 'left-player');
+				toggle('left');
 			}
 			function toggleRight() {
-				toggle('right', 'right-player');
+				toggle('right');
 			}
-			function toggle(divId, playerId) {
+			function toggle(divId) {
 				var div = $('#' + divId);
 				if( div.hasClass('playing') ) {
-					pause(divId, playerId);
+					pause(divId);
 				} else {
-					play(divId, playerId);
+					play(divId);
 				}
 			}
-			function play(divId, playerId) {
+			function play(divId) {
 				$('#' + divId).addClass('playing');
-				document.getElementById(playerId).src = $('#' + playerId).attr('data-src');
-				setTimeout('playInternal("' + playerId + '")', 500 );
+				document.getElementById('player').src = $('#player').attr('data-' + divId);
+				setTimeout('playInternal()', 500 );
 			}
-			function playInternal(playerId) {
-				document.getElementById(playerId).play();
+			function playInternal() {
+				document.getElementById('player').play();
 			}
-			function pause(divId, playerId) {
+			function pause(divId) {
 				$('#' + divId).removeClass('playing');
-				if( document.getElementById(playerId).src.length > 0 ) {
-					$('#' + playerId).attr('data-src', document.getElementById(playerId).src);
-				}
-				document.getElementById(playerId).pause();
-				document.getElementById(playerId).src = '';
+				document.getElementById('player').pause();
+				document.getElementById('player').src = '';
 			}
 			function updateClock() {
 				var now = new Date();
@@ -301,8 +309,8 @@
 		</style>
 	</head>
 	<body>
-		<audio id="left-player" src="" data-src=""></audio>
-		<audio id="right-player" src="" data-src="http://s3.sonicabroadcast.com:8635/;listen.pls=undefined"></audio>
+		<audio id="player" src="" data-left="http://icecast.omroep.nl/3fm-bb-mp3" data-right="http://s3.sonicabroadcast.com:8635/;listen.pls=undefined"></audio>
+		<!-- <audio id="right-player" src="" data-src="http://s3.sonicabroadcast.com:8635/;listen.pls=undefined"></audio> -->
 		<div class="header left-header">3FM</div>
 		<div class="control" id="left"><span></span></div>
 		<div class="header right-header">Blue Marlin</div>
